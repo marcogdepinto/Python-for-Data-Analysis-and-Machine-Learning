@@ -1,0 +1,825 @@
+{
+  "cells": [
+    {
+      "metadata": {
+        "_cell_guid": "79c7e3d0-c299-4dcb-8224-4455121ee9b0",
+        "collapsed": true,
+        "_uuid": "d629ff2d2480ee46fbb7e2d37f6b5fab8052498a",
+        "trusted": false
+      },
+      "cell_type": "markdown",
+      "source": "# **Titanic Machine Learning **\n\nThis is my first machine learning competition and I am trying to structure this notebook in order to:\n\n1) Have a starting point for each future competition (libraries, techniques, code..);\n\n2) Help people like me (self-learners without a technical background) understanding how a machine learning competition works, how to make data analysis and predictions using ML techniques.\n\nThis notebook is a work in progress: I have put it together as a starting point to work on in my free time.\n\nHave fun!"
+    },
+    {
+      "metadata": {
+        "_uuid": "95a935c6e83806bd592b5db5592f5a4191b0dbd0"
+      },
+      "cell_type": "markdown",
+      "source": "# **Module Importing**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "937e9203b661cda848fdd8e049a698bd015d8292",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "# This Python 3 environment comes with many helpful analytics libraries installed\n# It is defined by the kaggle/python docker image: https://github.com/kaggle/docker-python\n# For example, here's several helpful packages to load in \n\nimport numpy as np # linear algebra\nimport pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)\nimport matplotlib.pyplot as plt\nimport seaborn as sns\nimport time\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.svm import SVC, LinearSVC\nfrom sklearn.ensemble import RandomForestClassifier, VotingClassifier, GradientBoostingClassifier\nfrom sklearn.neighbors import KNeighborsClassifier\nfrom sklearn.naive_bayes import GaussianNB\nfrom sklearn.linear_model import Perceptron\nfrom sklearn.linear_model import SGDClassifier\nfrom sklearn.tree import DecisionTreeClassifier\nfrom sklearn.model_selection import cross_val_score, GridSearchCV, train_test_split\nfrom sklearn.metrics import accuracy_score\nfrom tpot import TPOTClassifier\n\n# Input data files are available in the \"../input/\" directory.\n# For example, running this (by clicking run or pressing Shift+Enter) will list the files in the input directory\n\nimport os\nprint(os.listdir(\"../input\"))\n\n# Any results you write to the current directory are saved as output.",
+      "execution_count": 179,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "cac665a623768bcde5e9750c6329c1b7f7b3c278"
+      },
+      "cell_type": "markdown",
+      "source": "# **Data importing**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "b8a354ad43cdc925b78ac05d55ffb8518aceac5e",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "train = pd.read_csv('../input/train.csv')\ntest = pd.read_csv('../input/test.csv')\ncombined = [train, test]",
+      "execution_count": 180,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "71c098adfe15fff1b9db0f375563be916e270db9"
+      },
+      "cell_type": "markdown",
+      "source": "# **First review of the data**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "4e577e9bc077a183f51af00744d496e2581a1d91",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "train.head()",
+      "execution_count": 90,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "fda473769aa75fd09f4a50477ec0fc1f32da4d84",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "train.describe()",
+      "execution_count": 91,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "47f9c375d7085bb6c8b375d88e52ba5b17cca2ff"
+      },
+      "cell_type": "markdown",
+      "source": "# **How many passengers survives?**"
+    },
+    {
+      "metadata": {
+        "_uuid": "4bf0da92de18668dfec5e877e2e94765d167dacc"
+      },
+      "cell_type": "markdown",
+      "source": "From the 'describe' function above we can see (row 'mean', column 'Survived') that the mean of the passenger survived is 0.383838.\n\nWe can now analyze the survival rate using as a criteria the Passenger Class and the Sex."
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "fa540f6864c73223d4118246e624623e65419856",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "sns.barplot(x=\"Sex\", y=\"Survived\", hue=\"Pclass\", data=train)",
+      "execution_count": 60,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "e6dde43589c5dd2927c59cfd6d2f12f5886a2568"
+      },
+      "cell_type": "markdown",
+      "source": "What comes out is that the higher the class of the passenger, the more its possibilities to survive.\n\nAlso, women survival rate is greater than men' ones.\n\nThis aspect is strictly correlated to the maritime tradition of evacuating women and children first.\n\nIn fact, if we group the data above for age, what we see is that children have a higher survival rate."
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "4ae47eed18858a87671909f83ff2ad7617c68aed",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "group_by_age = pd.cut(train[\"Age\"], np.arange(0, 90, 10))\nage_grouping = train.groupby(group_by_age).mean()\nage_grouping['Survived'].plot.bar()",
+      "execution_count": 7,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "3d356e72effa6c67cda09ccb8df71269e9ca55af"
+      },
+      "cell_type": "markdown",
+      "source": "# **Plotting Age Distribution and its relation with the Passengers Class**"
+    },
+    {
+      "metadata": {
+        "_uuid": "e240fcce00bcc2a8e9464a43549bec06d3ae81ce"
+      },
+      "cell_type": "markdown",
+      "source": "We will now use a swarmplot to see the relations between Age, Class and Sex."
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "a477dbcca9d4c935feb5e9fd57d632b8e6991d96",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "sns.swarmplot(x=\"Pclass\", y=\"Age\", hue=\"Sex\", data=train)\nplt.legend(bbox_to_anchor=(1.1, 1), loc=2, borderaxespad=0.)\nplt.title(\"Age distribution vs Class\", fontsize=15)",
+      "execution_count": 8,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "acdc942b76c451ad41db1c8f756c3409282e31e6"
+      },
+      "cell_type": "markdown",
+      "source": "# **Using a facet grid to create a box plot of Age Distribution**"
+    },
+    {
+      "metadata": {
+        "_uuid": "740f42548441276fb219f679079f6c864e90e113"
+      },
+      "cell_type": "markdown",
+      "source": "An alternative to the swarmplot could be using a box plot, as shown below.\n\nThanks to these two plots, we discovered that 1st class passengers seems older: probabily, according to the age, they can afford a expensive ticket."
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "c84dae8c718a77930788de4ba886ce837208d2a6",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "g = sns.FacetGrid(train, col=\"Pclass\")\ng.map(sns.boxplot, \"Sex\", \"Age\", palette=\"Set3\")",
+      "execution_count": 9,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "0106e170d12388b4c74308960c82c532029aa105"
+      },
+      "cell_type": "markdown",
+      "source": "# **Machine Learning**"
+    },
+    {
+      "metadata": {
+        "_uuid": "6fdcced50bb1e4458db61b3dbbea05b80514af7a"
+      },
+      "cell_type": "markdown",
+      "source": " As a starting point, we will applying all the following models and then compare the results.\n\n- Logistic Regression\n- KNN or k-Nearest Neighbors\n- Support Vector Machines\n- Naive Bayes classifier\n- Decision Tree\n- Random Forest\n- Perceptron\n- Artificial neural network\n- RVM or Relevance Vector Machine\n- TPOT"
+    },
+    {
+      "metadata": {
+        "_uuid": "eaf34c1daf512c65f8820e227aa2a17f60cee81c"
+      },
+      "cell_type": "markdown",
+      "source": "# **Preparing the Data**"
+    },
+    {
+      "metadata": {
+        "_uuid": "a4bc6c0ff53974a17f071f0d985c1d92a7e320db"
+      },
+      "cell_type": "markdown",
+      "source": "**Categorical features analysis**"
+    },
+    {
+      "metadata": {
+        "_uuid": "50d76b8dddfcf049b5ee379ae76b1c29083381dd"
+      },
+      "cell_type": "markdown",
+      "source": "Categorical features needs to be converted in order to apply our models.\n\nSex is a case of feature that needs to be converted. "
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "0005d8dc96e4baea92982a364dc6a28e3d91e108",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "for dataset in combined:\n    dataset['Sex'] = dataset['Sex'].map( {'female': 1, 'male': 0} ).astype(int)\ntrain.head()",
+      "execution_count": 181,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "4bd114bf812ed902186b5bc5cf708b203ec88182"
+      },
+      "cell_type": "markdown",
+      "source": "**Research of NaN values**"
+    },
+    {
+      "metadata": {
+        "_uuid": "c376ffffc59027cf1f5e16a298e465140450b11a"
+      },
+      "cell_type": "markdown",
+      "source": "NaN values (not a number) needs to be replaced/dropped or the Machine Learning algorithms will not work.\nIn the two lines below, we will check which columns has NaN values (if True, there is at least a NaN record in the column)"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "c2c56f6ff73f5141f6ad3979f08d9da3b421a444",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "train.isnull().any()",
+      "execution_count": 93,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "b841da5cd5b8a22d3eab1a21ff1413fd3ad053e5",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "test.isnull().any()",
+      "execution_count": 115,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "ba5e29adc1b44857f4860204db686d258bad028d"
+      },
+      "cell_type": "markdown",
+      "source": "Let's now replace the NaN values with the mean of the value of the column."
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "99698ba888d75756382ea010a08469bfbb0fe441",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "train['Age'] = train['Age'].fillna(train['Age'].mean())\ntest['Age'] = test['Age'].fillna(test['Age'].mean())",
+      "execution_count": 182,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "ea4f52592f2452d35bd9dff97c521d12befea58c"
+      },
+      "cell_type": "markdown",
+      "source": "Let's check the data again to see if the substitution is OK."
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "ce5acb3f66a1a672f43990b8db88ae1c3001b99a",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "train.isnull().any()",
+      "execution_count": 95,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "0b3f5561f596314dc7affa2cde1b6d0be6eb5d0f",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "test.isnull().any()",
+      "execution_count": 161,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "79bab4da87843498e3ca66b72d31b99bfe8745e1"
+      },
+      "cell_type": "markdown",
+      "source": "We will now work on the 'Cabin' column.\n\nLet's starting filling NaN values"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "c94aaf911488316f7e3a8c147058321e95a2172b",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "train['Cabin'].fillna('U', inplace=True)\ntrain['Cabin'] = train['Cabin'].apply(lambda x: x[0])\ntrain['Cabin'].unique()",
+      "execution_count": 183,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "2abbb062682d7cab612f584475aad31aa91f1117",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "test['Cabin'].fillna('U', inplace=True)\ntest['Cabin'] = test['Cabin'].apply(lambda x: x[0])\ntest['Cabin'].unique()",
+      "execution_count": 184,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "92e7c390f1842375bc09baef2587bd681577a1e9",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "replacement = {\n    'T': 0,\n    'U': 1,\n    'A': 2,\n    'G': 3,\n    'C': 4,\n    'F': 5,\n    'B': 6,\n    'E': 7,\n    'D': 8\n}\n\ntrain['Cabin'] = train['Cabin'].apply(lambda x: replacement.get(x))\ntrain['Cabin'] = StandardScaler().fit_transform(train['Cabin'].values.reshape(-1, 1))\ntrain.head()['Cabin']",
+      "execution_count": 185,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "76f007b2dc7a6bde7b2d4a2a41683c824bc92386",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "test['Cabin'] = test['Cabin'].apply(lambda x: replacement.get(x))\ntest['Cabin'] = StandardScaler().fit_transform(test['Cabin'].values.reshape(-1, 1))\ntest.head()['Cabin']",
+      "execution_count": 186,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "cb4725c989f702a3e9086fe3d91ddbb7b901d89c"
+      },
+      "cell_type": "markdown",
+      "source": "We will now work with the Fare column"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "dae77cfb424020e3d1be141be0feb72c9cbb56a8",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "train['Fare'] = train['Fare'].fillna(train['Fare'].mean())\ntest['Fare'] = test['Fare'].fillna(test['Fare'].mean())",
+      "execution_count": 187,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "53edcfe17c57a3595447926c47d828ac395d075e"
+      },
+      "cell_type": "markdown",
+      "source": "Trying adding new features to improve the score of the model"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "collapsed": true,
+        "_uuid": "bb11fb981d36e04715dc685bd52b191bc178b060"
+      },
+      "cell_type": "code",
+      "source": "def process_family_train():\n    \n    # introducing a new feature : the size of families (including the passenger)\n    train['FamilySize'] = train['Parch'] + train['SibSp'] + 1\n    \n    # introducing other features based on the family size\n    train['Singleton'] = train['FamilySize'].map(lambda s: 1 if s == 1 else 0)\n    train['SmallFamily'] = train['FamilySize'].map(lambda s: 1 if 2 <= s <= 4 else 0)\n    train['LargeFamily'] = train['FamilySize'].map(lambda s: 1 if 5 <= s else 0)\n    \n    return train",
+      "execution_count": 188,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "b3593c7af9866d00032beafdbda7a22fcf43004c",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "train = process_family_train()\ntrain.head()",
+      "execution_count": 189,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "collapsed": true,
+        "_uuid": "0238c86933b1b94ec66a68c6d0beb70433220ad3"
+      },
+      "cell_type": "code",
+      "source": "def process_family_test():\n    \n    # introducing a new feature : the size of families (including the passenger)\n    test['FamilySize'] = test['Parch'] + test['SibSp'] + 1\n    \n    # introducing other features based on the family size\n    test['Singleton'] = test['FamilySize'].map(lambda s: 1 if s == 1 else 0)\n    test['SmallFamily'] = test['FamilySize'].map(lambda s: 1 if 2 <= s <= 4 else 0)\n    test['LargeFamily'] = test['FamilySize'].map(lambda s: 1 if 5 <= s else 0)\n    \n    return test",
+      "execution_count": 190,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "e07d42083626d4afe65bfe713c374a6691c122a7",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "test = process_family_test()\ntest.head()",
+      "execution_count": 191,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "ccd2a5abf66a712b09e44053f24f741f57cb2f69"
+      },
+      "cell_type": "markdown",
+      "source": "At this point, we will shape the dataframes dropping a few columns"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "017e5c545af0a4197d69f9f46fd2af6ade8fccd5",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "train_df = train.drop(['Name','Embarked', 'Ticket', 'PassengerId'], axis=1)\ntest_df = test.drop(['Name', 'Embarked', 'Ticket'], axis=1)\ncombined = [train_df, test_df]\ntrain_df.shape, test_df.shape",
+      "execution_count": 192,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "e68615a35b27a52b44a13d87ebc276fca733684b",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "X_train = train_df.drop(\"Survived\", axis=1)\nY_train = train_df[\"Survived\"]\nX_test  = test_df.drop(\"PassengerId\", axis=1).copy()\nX_train.shape, Y_train.shape, X_test.shape",
+      "execution_count": 193,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "c3ecceffdf2172b03319f383f9276b990eb4b976",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "X_train.head()",
+      "execution_count": 194,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "09dff53b7f63925d331f76da7aa40c6a857a7958",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "X_test.head()",
+      "execution_count": 115,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "6aae24c88f2c86bd2c48ddb0371b7e0cc5f9f24a"
+      },
+      "cell_type": "markdown",
+      "source": "# **Logistic Regression**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "1dd90345e46b82d6a04860aa3cb6b13a68251797",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "regr = LogisticRegression()\nregr.fit(X_train, Y_train)\nY_pred = regr.predict(X_test)\nacc_log = round(regr.score(X_train, Y_train) * 100, 2)\nacc_log",
+      "execution_count": 195,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "f1d680109d1f31672eb0b92f4f447ac297098ac2"
+      },
+      "cell_type": "markdown",
+      "source": "# **Support Vector Machines**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "b16bf27eba1190b6c223c23a26fc4d605d0a42fc",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "svc = SVC()\nsvc.fit(X_train, Y_train)\nY_pred = svc.predict(X_test)\nacc_svc = round(svc.score(X_train, Y_train) * 100, 2)\nacc_svc",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "388ddbe86c4e33dc2207b85080098548eb40fb97"
+      },
+      "cell_type": "markdown",
+      "source": "# **k-Nearest Neighbors**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "4e5a692453597ef16e41c5a52619c407508088e0",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "knn = KNeighborsClassifier(n_neighbors = 3)\nknn.fit(X_train, Y_train)\nY_pred = knn.predict(X_test)\nacc_knn = round(knn.score(X_train, Y_train) * 100, 2)\nacc_knn",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "36927a868d9c6efa6130234f136e7f2ba23d33f1"
+      },
+      "cell_type": "markdown",
+      "source": "# **Gaussian Naive Bayes**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "dd146e232fdc84217aeccfef8267084aa9811f76",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "gaussian = GaussianNB()\ngaussian.fit(X_train, Y_train)\nY_pred = gaussian.predict(X_test)\nacc_gaussian = round(gaussian.score(X_train, Y_train) * 100, 2)\nacc_gaussian",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "72bdfef610c54184d74cd3408b9e33f5186d6841"
+      },
+      "cell_type": "markdown",
+      "source": "# **Perceptron**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "1208ee928133b00ed125dfefc61fa7c9adc8f36b",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "perceptron = Perceptron()\nperceptron.fit(X_train, Y_train)\nY_pred = perceptron.predict(X_test)\nacc_perceptron = round(perceptron.score(X_train, Y_train) * 100, 2)\nacc_perceptron",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "528304e8d7200db4ae8cb7ba2be865e6e4caad4f"
+      },
+      "cell_type": "markdown",
+      "source": "# **Linear SVC**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "abcefe44697d3be37e5e0011670f9caeb9277d0d",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "linear_svc = LinearSVC(max_iter=100000)\nlinear_svc.fit(X_train, Y_train)\nY_pred = linear_svc.predict(X_test)\nacc_linear_svc = round(linear_svc.score(X_train, Y_train) * 100, 2)\nacc_linear_svc",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "44cd39b14bfc9e0f0bdcb4c4c3e2176423e051e7"
+      },
+      "cell_type": "markdown",
+      "source": "# **Stochastic Gradient Descent**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "92b1691c8e35dad4588809682b8065615598e958",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "sgd = SGDClassifier(max_iter=16050)\nsgd.fit(X_train, Y_train)\nY_pred = sgd.predict(X_test)\nacc_sgd = round(sgd.score(X_train, Y_train) * 100, 2)\nacc_sgd",
+      "execution_count": 197,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "f98cc2febce84b2ff90003f2eb7419cdc1d63ed0"
+      },
+      "cell_type": "markdown",
+      "source": "# **Decision Tree**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "84b0d1f26873807a7d06fdd3fad0611f10858ad9",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "decision_tree = DecisionTreeClassifier()\ndecision_tree.fit(X_train, Y_train)\nY_pred = decision_tree.predict(X_test)\nacc_decision_tree = round(decision_tree.score(X_train, Y_train) * 100, 2)\nacc_decision_tree",
+      "execution_count": 196,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "d1992dd474c4e28bf159cc0b9682434ca22ae89a"
+      },
+      "cell_type": "markdown",
+      "source": "# **Random Forest**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "8085113d90ab9235a2d56740d2115a6c05a9728e",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "random_forest = RandomForestClassifier(n_estimators=100)\nrandom_forest.fit(X_train, Y_train)\nY_pred = random_forest.predict(X_test)\nrandom_forest.score(X_train, Y_train)\nacc_random_forest = round(random_forest.score(X_train, Y_train) * 100, 2)\nacc_random_forest",
+      "execution_count": 198,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "aabf880d089e94f456a0dd5b059f54d48d1a571b"
+      },
+      "cell_type": "markdown",
+      "source": "# **TPOT**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "760283700b532a85bcefe2a5665831baea503262",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "tpot = TPOTClassifier(verbosity=2, max_time_mins=2, max_eval_time_mins=0.04, population_size=40)\ntpot.fit(X_train, Y_train)",
+      "execution_count": 206,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "66b113625eee3d640ac42faa98b2918409c4a2f9",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "Y_pred = tpot.predict(X_test)\ntpot.score(X_train, Y_train)\nacc_tpot = round(tpot.score(X_train, Y_train) * 100, 2)\nacc_tpot",
+      "execution_count": 207,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "c9bfdd59485007df15e7383f6aeb2df406611191"
+      },
+      "cell_type": "markdown",
+      "source": "# **Evaluation of the models**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "0ac03e0e0810f5755c031a4fe6ac42fda161a7d8",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "models = pd.DataFrame({\n    'Model': ['Support Vector Machines', 'KNN', 'Logistic Regression', \n              'Random Forest', 'Naive Bayes', 'Perceptron', \n              'Stochastic Gradient Decent', 'Linear SVC', \n              'Decision Tree', 'TPOT'],\n    'Score': [acc_svc, acc_knn, acc_log, \n              acc_random_forest, acc_gaussian, acc_perceptron, \n              acc_sgd, acc_linear_svc, acc_decision_tree, acc_tpot]})\nmodels.sort_values(by='Score', ascending=False)",
+      "execution_count": 199,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "0123be4e303fa72ca4fe3d19dd132f82a3a36e83"
+      },
+      "cell_type": "markdown",
+      "source": "# **Optimizing Model**"
+    },
+    {
+      "metadata": {
+        "_uuid": "8b0ca9098993679166fa2f0e31855d06ec529fea"
+      },
+      "cell_type": "markdown",
+      "source": "Applying a grid search on a few hyperparameters to get the best results from the Random Forest and from the gradient boosting to try to improve the overall accuracy"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "20b671b7bb9f8a5236bf865a61d97ed8bfa090ed",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "# Split the training set into a development and an evaluation sets\nX_dev, X_eval, y_dev, y_eval = train_test_split(X_train,\n                                                Y_train,\n                                                test_size=0.2,\n                                                random_state=42)\n\nX_test.head(10)",
+      "execution_count": 200,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "d77332e517960c90947d97865592c6c1ac36b50c",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "# 1. Random Forest\ndict_clf = {}\n\n\nparamgrid = {\n    'n_estimators':      [100, 150, 200, 250, 300, 400, 500],\n    'criterion':         ['gini', 'entropy'],\n    'max_features':      ['auto', 'log2'],\n    'min_samples_leaf':  list(range(2, 8))\n}\nGS = GridSearchCV(RandomForestClassifier(random_state=77),\n                  paramgrid,\n                  cv=4)\n\n# Fit the data and record time taking to train\nt0 = time.time()\nGS.fit(X_dev, y_dev)\nt = time.time() - t0\n\n# Store best parameters, score and estimator\nbest_clf = GS.best_estimator_\nbest_params = GS.best_params_\nbest_score = GS.best_score_\n\nname = 'RF'",
+      "execution_count": 201,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "8ff599b193235a8da04729cc731744eddf4739bc",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "best_clf.fit(X_dev, y_dev)\nacc_eval = accuracy_score(y_eval, best_clf.predict(X_eval))\n\ndict_clf[name] = {\n    'best_par': best_params,\n    'best_clf': best_clf,\n    'best_score': best_score,\n    'score_eval': acc_eval,\n    'fit_time': t,\n}\n\nacc_eval",
+      "execution_count": 202,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "collapsed": true,
+        "_uuid": "f4f747e001ffdf0b6bcbd96c3accdc1fe91f22ee"
+      },
+      "cell_type": "code",
+      "source": "# 2. GradientBoosting\nparamgrid = {\n    'n_estimators':      [100, 150, 200, 250, 300, 400, 500],\n    'max_features':      ['auto', 'log2'],\n    'min_samples_leaf':  list(range(2, 7)),\n    'loss' :             ['deviance', 'exponential'],\n    'learning_rate':     [0.025, 0.05, 0.075, 0.1],\n}\nGS = GridSearchCV(GradientBoostingClassifier(random_state=77),\n                  paramgrid,\n                  cv=4)\n\n# Fit the data and record time taking to train\nt0 = time.time()\nGS.fit(X_dev, y_dev)\nt = time.time() - t0\n\n# Store best parameters, score and estimator\nbest_clf = GS.best_estimator_\nbest_params = GS.best_params_\nbest_score = GS.best_score_\n\nname = 'GB'\nbest_clf.fit(X_dev, y_dev)\nacc_eval = accuracy_score(y_eval, best_clf.predict(X_eval))\n\ndict_clf[name] = {\n    'best_par': best_params,\n    'best_clf': best_clf,\n    'best_score': best_score,\n    'score_eval': acc_eval,\n    'fit_time': t,\n}",
+      "execution_count": 203,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "7a562d2a64f808d6d7006f9589dd107e16919f25",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "acc_eval",
+      "execution_count": 204,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "55af81313625720321d0cc06943dbffefa1ecc93",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "for clf in dict_clf.keys():\n    print(\"{0} classifier:\\n\\t- Best score = {1:.2%}\".format(clf, dict_clf[clf]['best_score']))\n    print(\"\\t- Score on evaluation set = {0:.2%}\".format(dict_clf[clf]['score_eval']))\n    print(\"\\t- Fitting time = {0:.1f} min\".format(round(dict_clf[clf]['fit_time']/60, 1)))\n    print(\"\\t- Best parameters:\")\n    for par in sorted(dict_clf[clf]['best_par'].keys()):\n        print(\"\\t\\t* {0}: {1}\".format(par, dict_clf[clf]['best_par'][par]))",
+      "execution_count": 205,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "4a75a4cde4dea2da92c7bc5f02d54f12ccbd3608"
+      },
+      "cell_type": "markdown",
+      "source": "# **Ensembling**"
+    },
+    {
+      "metadata": {
+        "_uuid": "ae98b96c9186d3434facf3758782bbd473631b3f"
+      },
+      "cell_type": "markdown",
+      "source": "Including a voting system on the top 3-5 to get better results"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "08ad53f7c52cf245ae5afc1e79fe7ab975d3b1db",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "estimators = [('RF', dict_clf['RF']['best_clf']),\n              ('GB', dict_clf['GB']['best_clf']),\n              ('KNN', knn), ('svc', svc), ('trees', decision_tree)]\n\n# Instantiate the VotingClassifier using hard voting\nvoter = VotingClassifier(estimators=estimators, voting='hard')\nvoter.fit(X_train, Y_train)\n\nY_pred = voter.predict(X_test).astype(int)",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "_uuid": "1c764d599c53d6a9db7547c5251821147a26aeb6"
+      },
+      "cell_type": "markdown",
+      "source": "# **Submission**"
+    },
+    {
+      "metadata": {
+        "trusted": true,
+        "_uuid": "3f5846fcc1ca54f210585a98893ac1e03ff51e53",
+        "collapsed": true
+      },
+      "cell_type": "code",
+      "source": "subm = pd.DataFrame({\n        \"PassengerId\": test_df[\"PassengerId\"],\n        \"Survived\": Y_pred\n    })\nsubm.to_csv('subm.csv', index=False)",
+      "execution_count": null,
+      "outputs": []
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "display_name": "Python 3",
+      "language": "python",
+      "name": "python3"
+    },
+    "language_info": {
+      "name": "python",
+      "version": "3.6.5",
+      "mimetype": "text/x-python",
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "pygments_lexer": "ipython3",
+      "nbconvert_exporter": "python",
+      "file_extension": ".py"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 1
+}
