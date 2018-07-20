@@ -2,7 +2,7 @@
 
 This repo contains the exercises made for the course of Jose Portilla on Udemy.
 
-The course teaches how to use NumPy, Pandas, Seaborn , Matplotlib , Plotly , Scikit-Learn , Machine Learning models, Tensorflow and more.
+The course teaches how to use NumPy, Pandas, Seaborn , Matplotlib , Plotly , Scikit-Learn , Machine Learning models, Tensorflow, Deep Neural Networks and more.
 
 The exercises offer the possibility to reproduce the real analysis process using real data (like datasets on Kaggle) or fake data (created for the scope of the course).
 
