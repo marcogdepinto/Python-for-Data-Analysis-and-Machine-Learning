@@ -6,7 +6,7 @@ The course teaches how to use NumPy, Pandas, Seaborn , Matplotlib , Plotly , Sci
 
 The exercises offer the possibility to reproduce the real analysis process using real data (like datasets on Kaggle) or fake data (created for the scope of the course).
 
-### Details of each project ###
+### Details of each project: ###
 
 1. *911 Calls Data Capstone Project .ipynb* : Analysis of the [Kaggle 911 Dataset](https://www.kaggle.com/mchirico/montcoalert) with visualizations in Seaborn and Matplotlib.
 
